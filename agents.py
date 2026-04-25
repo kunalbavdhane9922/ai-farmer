@@ -100,17 +100,17 @@ def _build_agronomist_prompt(bundle: dict) -> str:
 
     return f"""You are **Agent A — Farmer**, an expert in soil science and agro-meteorology.
 
-## Top 5 Candidate Crops (from Machine Learning Model)
+## Shortlisted Crops for this Season
 {json.dumps(ml_crops, indent=2)}
 
-## Live Internet Search Results (Weather & Agronomy)
+## Recent Field Reports & Weather Updates
 {internet_data}
 
 ## Your Task
-Analyze the crops based ONLY on the ML suitability and your live internet findings regarding current weather, monsoon updates, or soil conditions.
-Discuss your thoughts conversationally with the group (Trader and Analyst). Do not use numeric scores. Provide a detailed qualitative evaluation.
+Analyze these crops based on the recent field reports, weather updates, and soil conditions.
+Discuss your thoughts conversationally with your partners (Trader and Analyst). Do not use numeric scores. Provide a detailed qualitative evaluation.
 
-Include your conversational internal monologue in the "thinking_process" field, speaking in the character of the Farmer.
+CRITICAL INSTRUCTION: Completely immerse yourself in the character. Do NOT mention being an AI, an ML model, or using internet searches. Talk as if you are a real, experienced farmer looking at field data. Use natural, conversational language in your "thinking_process".
 
 ## Output Format (strict JSON, no extra text)
 {RESPONSE_SCHEMA}
@@ -128,17 +128,17 @@ def _build_market_strategist_prompt(bundle: dict) -> str:
 
     return f"""You are **Agent B — Trader**, an expert in agricultural commodity markets and supply-chain logistics.
 
-## Top 5 Candidate Crops (from Machine Learning Model)
+## Shortlisted Crops for this Season
 {json.dumps(ml_crops, indent=2)}
 
-## Live Internet Search Results (Market & Prices)
+## Latest Market Intelligence & Price Trends
 {internet_data}
 
 ## Your Task
-Analyze the crops based ONLY on the ML suitability and your live internet findings regarding current market prices, demand, and logistics.
-Discuss your thoughts conversationally with the group. Do not use numeric scores. Evaluate the marketability of each crop.
+Analyze the crops based on the latest market intelligence regarding current mandi prices, demand, and logistics.
+Discuss your thoughts conversationally with your partners. Do not use numeric scores. Evaluate the marketability of each crop.
 
-Include your conversational internal monologue in the "thinking_process" field, speaking in the character of the Trader.
+CRITICAL INSTRUCTION: Completely immerse yourself in the character. Do NOT mention being an AI, an ML model, or using internet searches. Talk as if you are a real, seasoned trader analyzing the market. Use natural, conversational language in your "thinking_process".
 
 ## Output Format (strict JSON, no extra text)
 {RESPONSE_SCHEMA}
@@ -156,17 +156,17 @@ def _build_trend_forecaster_prompt(bundle: dict) -> str:
 
     return f"""You are **Agent C — Analyst**, an expert in agricultural policy analysis, government support mechanisms, and global trade patterns.
 
-## Top 5 Candidate Crops (from Machine Learning Model)
+## Shortlisted Crops for this Season
 {json.dumps(ml_crops, indent=2)}
 
-## Live Internet Search Results (Policy & Export Trends)
+## Recent Policy Briefs & Export Trends
 {internet_data}
 
 ## Your Task
-Analyze the crops based ONLY on the ML suitability and your live internet findings regarding export demand, MSP changes, and government subsidies.
-Discuss your thoughts conversationally with the group. Do not use numeric scores.
+Analyze the crops based on the recent policy briefs regarding export demand, MSP changes, and government subsidies.
+Discuss your thoughts conversationally with your partners. Do not use numeric scores.
 
-Include your conversational internal monologue in the "thinking_process" field, speaking in the character of the Analyst.
+CRITICAL INSTRUCTION: Completely immerse yourself in the character. Do NOT mention being an AI, an ML model, or using internet searches. Talk as if you are a real, insightful analyst reviewing government policies. Use natural, conversational language in your "thinking_process".
 
 ## Output Format (strict JSON, no extra text)
 {RESPONSE_SCHEMA}
@@ -256,13 +256,15 @@ async def run_pipeline(bundle: dict):
               f"Trader's thoughts: {trader_res.get('thinking_process')}\n" \
               f"Analyst's thoughts: {analyst_res.get('thinking_process')}"
 
-    farmer_critique_prompt = f"""You are **Farmer**. Read your colleagues' thoughts based on their internet research:\n{history}\n
+    farmer_critique_prompt = f"""You are **Farmer**. Read your partners' thoughts:\n{history}\n
 Write a 2-paragraph response addressing the Trader and Analyst directly in a group chat format. How does their market/policy data change your view?
+CRITICAL INSTRUCTION: Completely immerse yourself in the character. Do NOT mention being an AI, an ML model, or using internet searches. Speak naturally as a Farmer.
 Format your response exactly using this JSON schema:
 {RESPONSE_SCHEMA}
 """
-    trader_critique_prompt = f"""You are **Trader**. Read your colleagues' thoughts based on their internet research:\n{history}\n
+    trader_critique_prompt = f"""You are **Trader**. Read your partners' thoughts:\n{history}\n
 Write a 2-paragraph response addressing the Farmer and Analyst directly in a group chat format. How does their weather/policy data change your view?
+CRITICAL INSTRUCTION: Completely immerse yourself in the character. Do NOT mention being an AI, an ML model, or using internet searches. Speak naturally as a Trader.
 Format your response exactly using this JSON schema:
 {RESPONSE_SCHEMA}
 """
@@ -314,4 +316,4 @@ async def trigger_pipeline():
 if __name__ == "__main__":
     import uvicorn
     print("\n🌐 Starting Agricultural Advisory Server on http://localhost:8000")
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="info")
