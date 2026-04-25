@@ -19,29 +19,23 @@
         }
 
         #chat-container {
-            background-color: #efeae2;
+            background-color: #f5f7f9;
             width: 100%;
-            max-width: 900px;
             height: 100%;
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-            background-repeat: repeat;
-            background-blend-mode: multiply;
-            background-color: rgba(239, 234, 226, 0.95);
         }
 
         /* Header */
         #header {
-            background-color: #008069;
-            padding: 10px 16px;
+            background-color: #1976d2;
+            padding: 10px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             z-index: 10;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
             color: #ffffff;
         }
 
@@ -54,12 +48,13 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background-color: #d9fdd3;
+            background-color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 20px;
             margin-right: 15px;
+            color: #1976d2;
         }
 
         .group-name {
@@ -163,23 +158,25 @@
         }
 
         .msg-bubble {
-            padding: 6px 10px 8px 10px;
-            border-radius: 8px;
-            max-width: 80%;
+            max-width: 65%;
+            padding: 12px 16px;
+            border-radius: 12px;
             position: relative;
-            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+            font-size: 15px;
+            line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            word-wrap: break-word;
         }
 
+        /* Default bubble colors, overridden by JS */
         .msg-bubble.sent {
-            background-color: #d9fdd3;
-            /* WhatsApp light sent */
-            border-bottom-right-radius: 0;
+            background-color: #bbdefb; /* Farmer - Light Blue */
+            color: #000;
         }
 
         .msg-bubble.received {
             background-color: #ffffff;
-            /* WhatsApp light received */
-            border-bottom-left-radius: 0;
+            color: #000;
         }
 
         .msg-bubble.system {
@@ -275,10 +272,49 @@
             margin-left: 8px;
             font-style: italic;
         }
+
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-size: 24px;
+            color: #1976d2;
+            font-weight: 600;
+        }
+        
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #1976d2;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 
 <body>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div>Generating Report...</div>
+        <div style="font-size: 16px; margin-top: 10px; color: #555;">This may take up to 2 minutes based on the debate history.</div>
+    </div>
+
     <div id="chat-container">
         <div id="header">
             <div class="header-info">
@@ -327,12 +363,14 @@
         function skipConvo() {
             skipAnimation = true;
             document.getElementById('skip-btn').style.display = 'none';
+            document.getElementById('loading-overlay').style.display = 'flex';
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ action: "skip" }));
             }
         }
 
         function showReport() {
+            document.getElementById('loading-overlay').style.display = 'none';
             document.getElementById('output').style.display = 'none';
             document.getElementById('typing-indicator').style.display = 'none';
             document.getElementById('report-container').style.display = 'block';
@@ -426,6 +464,7 @@
                     reportBtn.style.display = 'block';
                     reportBtn.disabled = true;
                     document.getElementById('skip-btn').style.display = 'none';
+                    document.getElementById('loading-overlay').style.display = 'flex';
                     skipAnimation = true; 
                     isProcessing = false;
                     processQueue();
@@ -439,6 +478,7 @@
                     reportBtn.disabled = false;
                     reportBtn.style.display = 'block';
                     document.getElementById('skip-btn').style.display = 'none';
+                    document.getElementById('loading-overlay').style.display = 'none';
                     isProcessing = false;
                     processQueue();
                     return;
@@ -474,14 +514,6 @@
             const isSender = displayName.includes('Farmer');
             const wrapperClass = isSender ? 'sent' : 'received';
 
-            // Get color class for receiver names
-            let colorClass = 'color-default';
-            if (!isSender) {
-                for (const [name, color] of Object.entries(colorMap)) {
-                    if (displayName.includes(name)) colorClass = color;
-                }
-            }
-
             // Render message bubble container
             const msgWrapper = document.createElement('div');
             msgWrapper.className = `msg-wrapper ${wrapperClass}`;
@@ -489,10 +521,19 @@
             const msgBubble = document.createElement('div');
             msgBubble.className = `msg-bubble ${wrapperClass}`;
 
-            // Only show name tag if it's a receiver (WhatsApp standard)
+            // Apply dynamic bubble colors based on character
+            if (displayName.includes('Farmer')) {
+                msgBubble.style.backgroundColor = '#bbdefb'; // Blue
+            } else if (displayName.includes('Trader')) {
+                msgBubble.style.backgroundColor = '#64b5f6'; // Darker Blue
+            } else if (displayName.includes('Analyst')) {
+                msgBubble.style.backgroundColor = '#fff59d'; // Yellow
+            }
+
+            // Only show name tag if it's a receiver
             if (!isSender) {
                 const senderSpan = document.createElement('span');
-                senderSpan.className = `sender-name ${colorClass}`;
+                senderSpan.className = `sender-name`;
                 senderSpan.textContent = displayName;
                 msgBubble.appendChild(senderSpan);
             }

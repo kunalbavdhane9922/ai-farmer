@@ -241,10 +241,13 @@ async def _generate_final_report(history: str) -> str:
 Based on the following deep discussion between the Farmer, Trader, and Analyst, create a definitive final recommendation report for the user.
 The report must accurately reflect the consensus (or trade-offs) discussed by the experts. Do NOT fake or hallucinate data; stick to what they discussed.
 Do not mention AI or ML models. Present it as a professional, human-authored agricultural advisory report.
-Use Markdown format. Include:
-1. **Executive Summary**: Which crop is the ultimate winner and why?
-2. **Crop Rankings**: Provide the top 3 choices with concise, highly accurate reasons derived from the debate.
-3. **Risk Factors**: Highlight any weather or market risks mentioned.
+
+Use Markdown format. The report MUST contain exactly these sections and headings:
+1. **Recommended Crops**: (Which crop(s) are the ultimate winners)
+2. **Profit**: (Each crop wise yearly profit estimates or potential based on the discussion)
+3. **Risk**: (Highlight any weather or market risks mentioned)
+4. **Reason**: (Why the recommended crops were chosen)
+5. **Avoid**: (Crops to completely avoid and why)
 
 Discussion History:
 {history}
