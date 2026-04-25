@@ -122,6 +122,7 @@ MODEL = "gemma3"
 RESPONSE_SCHEMA = """
 {
   "agent_name": "<string>",
+  "thinking_process": "<string: Your in-character conversational thoughts before giving the score. Make it sound like you are speaking to the group. Provide 1-2 sentences.>",
   "analysis": [
     {
       "crop_name": "<string>",
@@ -194,6 +195,7 @@ Analyze ALL 5 crops above. For each crop, assign a score from 1 (worst) to 10 (b
 3. **CRITICAL RULE**: If Zinc OR Boron levels are low/deficient, AND a dry spell (low rainfall < 5mm with high temperatures > 37°C) is predicted, you MUST PENALIZE crops with high water requirements (> 1000mm). Reduce their score by at least 2-3 points.
 
 Provide exactly one short sentence as the reason for each score.
+Include your conversational internal monologue in the "thinking_process" field, speaking in the character of the Farmer.
 
 ## Output Format (strict JSON, no extra text)
 {RESPONSE_SCHEMA}
@@ -248,6 +250,7 @@ Analyze ALL 5 crops above. For each crop, assign a score from 1 (worst) to 10 (b
 4. Price stability — "stable" is neutral; "declining" should be penalized.
 
 Provide exactly one short sentence as the reason for each score.
+Include your conversational internal monologue in the "thinking_process" field, speaking in the character of the Trader.
 
 ## Output Format (strict JSON, no extra text)
 {RESPONSE_SCHEMA}
@@ -299,6 +302,7 @@ Analyze ALL 5 crops above. For each crop, assign a score from 1 (worst) to 10 (b
 4. **Long-term trend viability** — crops aligned with India's 2026 agri-export targets score higher.
 
 Provide exactly one short sentence as the reason for each score.
+Include your conversational internal monologue in the "thinking_process" field, speaking in the character of the Analyst.
 
 ## Output Format (strict JSON, no extra text)
 {RESPONSE_SCHEMA}
@@ -325,31 +329,10 @@ async def _call_agent(agent_label: str, prompt: str, *, phase: str = "") -> dict
     client = AsyncClient()
     print(f"  🚀 [{agent_label}] Sending request to Ollama ({MODEL})…")
 
-    dispatch_text = "Analyzing data..."
-    status_text = "Here are my scores:"
-    
-    if "critique" in phase:
-        if "Farmer" in agent_label:
-            dispatch_text = "Let me review the Trader's points. I might need to adjust my scores based on their market view..."
-            status_text = "I've re-evaluated the crops taking the market into account. Here are my revised thoughts:"
-        else:
-            dispatch_text = "Reviewing the Farmer's agronomic concerns. Let's see if this changes my market strategy..."
-            status_text = "Done. Here is my revised outlook:"
-    else:
-        if "Farmer" in agent_label:
-            dispatch_text = "I'm looking at the soil report and the upcoming weather. Give me a moment to analyze how the crops will fare..."
-        elif "Trader" in agent_label:
-            dispatch_text = "Checking the current mandi prices and the 2026 MSP data... I'll let you know my thoughts shortly."
-        elif "Analyst" in agent_label:
-            dispatch_text = "I'm reviewing the export policies and global demand trends. Crunching the numbers now..."
-        else:
-            dispatch_text = "Analyzing data..."
-        status_text = "Alright, here are my initial scores for the Top 5 crops:"
-
-    # Broadcast: agent is starting
+    # Broadcast: agent is starting (trigger typing indicator on UI)
     await broadcast_log(
         sender=agent_label,
-        text=dispatch_text,
+        text="",
         phase=phase,
         event="agent_dispatch",
     )
@@ -367,10 +350,10 @@ async def _call_agent(agent_label: str, prompt: str, *, phase: str = "") -> dict
     raw = response["message"]["content"]
     print(f"  ✅ [{agent_label}] Response received in {elapsed:.1f}s")
 
-    # Broadcast: agent finished
+    # Broadcast: agent finished (empty text to just stop typing indicator if needed, though frontend handles it)
     await broadcast_log(
         sender=agent_label,
-        text=status_text,
+        text="",
         phase=phase,
         event="agent_status",
     )
@@ -383,8 +366,20 @@ async def _call_agent(agent_label: str, prompt: str, *, phase: str = "") -> dict
 
     try:
         result = json.loads(cleaned)
+        
+        # Broadcast the AI's actual original thinking as a conversational message
+        thinking = result.get("thinking_process", "")
+        if thinking:
+            await broadcast_log(
+                sender=agent_label,
+                text=thinking,
+                phase=phase,
+                event="agent_log",
+            )
+            
     except json.JSONDecodeError as e:
         print(f"  ⚠️  [{agent_label}] JSON parse failed, returning raw text.")
+        result = {"agent_name": agent_label, "analysis": []}
         result = {"agent_name": agent_label, "raw_response": raw, "parse_error": str(e)}
 
     # Broadcast: each crop's score + reasoning immediately

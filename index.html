@@ -270,6 +270,24 @@
             const data = messageQueue.shift();
             let displayName = data.sender || 'System';
 
+            // Filter out empty dispatch/status logs so they don't create empty bubbles
+            if (data.event === 'agent_dispatch' || data.event === 'agent_status') {
+                if (data.event === 'agent_dispatch') {
+                    // Start typing indicator without adding a message
+                    statusText.textContent = `${displayName.toLowerCase()} is typing...`;
+                    typingName.textContent = `${displayName} is thinking...`;
+                    typingIndicator.style.display = 'flex';
+                    output.scrollTop = output.scrollHeight;
+                } else if (data.event === 'agent_status') {
+                    // Hide typing indicator
+                    typingIndicator.style.display = 'none';
+                    statusText.textContent = "online";
+                }
+                isProcessing = false;
+                processQueue();
+                return;
+            }
+
             // System/Phase messages appear instantly
             if (displayName === 'System' || !data.text) {
                 addSystemMessage(data.text || `>>> Phase: ${data.phase}`);
