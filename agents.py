@@ -231,6 +231,8 @@ async def _call_agent(agent_label: str, prompt: str, *, phase: str = "") -> dict
         print(f"  ⚠️  [{agent_label}] JSON parse failed.")
         return {"agent_name": agent_label, "analysis": []}
 
+SKIP_REQUESTED = False
+
 # ──────────────────────────────────────────────
 #  Final Report Generator
 # ──────────────────────────────────────────────
@@ -249,7 +251,7 @@ Discussion History:
 """
     client = AsyncClient()
     print("  🚀 [System] Generating Final Report...")
-    await broadcast_log("System", "Generating Final Report based on the debate...", "final_report_generation", "system_log")
+    await broadcast_log("System", "Generating Final Report based on the debate...", "final_report_generation", "report_start")
     response = await client.chat(
         model=MODEL,
         messages=[{"role": "user", "content": prompt}],
@@ -263,12 +265,11 @@ Discussion History:
 #  Pipeline
 # ──────────────────────────────────────────────
 async def run_pipeline(bundle: dict):
+    global SKIP_REQUESTED
     # Phase 1: Initial Research & Discussion
     await broadcast_log("System", "Phase 1: Agents are searching the internet for real-time data and formulating their thoughts...", "phase_1", "phase_start")
 
     # Run searches and agents concurrently
-    # Note: duckduckgo search is synchronous but inside an async task, it might block slightly, 
-    # but for 3 agents it's completely fine. For heavy load, we'd use run_in_executor.
     farmer_task = asyncio.create_task(_call_agent("Farmer", _build_agronomist_prompt(bundle), phase="phase_1"))
     trader_task = asyncio.create_task(_call_agent("Trader", _build_market_strategist_prompt(bundle), phase="phase_1"))
     analyst_task = asyncio.create_task(_call_agent("Analyst", _build_trend_forecaster_prompt(bundle), phase="phase_1"))
@@ -285,43 +286,47 @@ async def run_pipeline(bundle: dict):
                 phase="phase_1"
             )
 
-    # Phase 2: Cross-Critique Discussion
-    await broadcast_log("System", "Phase 2: Agents are reviewing each other's internet findings and debating...", "cross_critique", "critique_round_start")
-
     # Build history context
     history = f"Farmer's thoughts: {farmer_res.get('thinking_process')}\n" \
               f"Trader's thoughts: {trader_res.get('thinking_process')}\n" \
               f"Analyst's thoughts: {analyst_res.get('thinking_process')}"
+    full_history = history
 
-    farmer_critique_prompt = f"""You are **Farmer**. Read your partners' thoughts:\n{history}\n
+    if not SKIP_REQUESTED:
+        # Phase 2: Cross-Critique Discussion
+        await broadcast_log("System", "Phase 2: Agents are reviewing each other's internet findings and debating...", "cross_critique", "critique_round_start")
+
+        farmer_critique_prompt = f"""You are **Farmer**. Read your partners' thoughts:\n{history}\n
 Write a 2-paragraph response addressing the Trader and Analyst directly in a group chat format. How does their market/policy data change your view?
 CRITICAL INSTRUCTION: Completely immerse yourself in the character. Do NOT mention being an AI, an ML model, or using internet searches. Speak naturally as a Farmer.
 Format your response exactly using this JSON schema:
 {RESPONSE_SCHEMA}
 """
-    trader_critique_prompt = f"""You are **Trader**. Read your partners' thoughts:\n{history}\n
+        trader_critique_prompt = f"""You are **Trader**. Read your partners' thoughts:\n{history}\n
 Write a 2-paragraph response addressing the Farmer and Analyst directly in a group chat format. How does their weather/policy data change your view?
 CRITICAL INSTRUCTION: Completely immerse yourself in the character. Do NOT mention being an AI, an ML model, or using internet searches. Speak naturally as a Trader.
 Format your response exactly using this JSON schema:
 {RESPONSE_SCHEMA}
 """
-    
-    fc_task = asyncio.create_task(_call_agent("Farmer", farmer_critique_prompt, phase="cross_critique"))
-    tc_task = asyncio.create_task(_call_agent("Trader", trader_critique_prompt, phase="cross_critique"))
-    
-    farmer_crit_res, trader_crit_res = await asyncio.gather(fc_task, tc_task)
-    
-    for res, name in [(farmer_crit_res, "Farmer"), (trader_crit_res, "Trader")]:
-        for c in res.get("analysis", []):
-            await broadcast_log(
-                sender=name,
-                text=c.get("evaluation", "No evaluation provided."),
-                crop=c.get("crop_name", "Unknown"),
-                phase="cross_critique"
-            )
+        
+        fc_task = asyncio.create_task(_call_agent("Farmer", farmer_critique_prompt, phase="cross_critique"))
+        tc_task = asyncio.create_task(_call_agent("Trader", trader_critique_prompt, phase="cross_critique"))
+        
+        farmer_crit_res, trader_crit_res = await asyncio.gather(fc_task, tc_task)
+        
+        for res, name in [(farmer_crit_res, "Farmer"), (trader_crit_res, "Trader")]:
+            for c in res.get("analysis", []):
+                await broadcast_log(
+                    sender=name,
+                    text=c.get("evaluation", "No evaluation provided."),
+                    crop=c.get("crop_name", "Unknown"),
+                    phase="cross_critique"
+                )
+        full_history += f"\nFarmer's Critique: {farmer_crit_res.get('thinking_process')}\nTrader's Critique: {trader_crit_res.get('thinking_process')}"
+    else:
+        await broadcast_log("System", "User skipped Phase 2. Moving straight to Final Report generation...", "cross_critique", "system_log")
 
     # Phase 3: Final Report
-    full_history = history + f"\nFarmer's Critique: {farmer_crit_res.get('thinking_process')}\nTrader's Critique: {trader_crit_res.get('thinking_process')}"
     await _generate_final_report(full_history)
 
     await broadcast_log("System", "Debate concluded.", "done", "pipeline_end")
@@ -336,15 +341,25 @@ def serve_dashboard():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    global SKIP_REQUESTED
     await manager.connect(websocket)
     try:
         while True:
-            await websocket.receive_text()
+            data = await websocket.receive_text()
+            try:
+                parsed = json.loads(data)
+                if parsed.get("action") == "skip":
+                    SKIP_REQUESTED = True
+                    print("  ⏭️ [System] Skip requested by user.")
+            except:
+                pass
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
 @app.post("/run")
 async def trigger_pipeline():
+    global SKIP_REQUESTED
+    SKIP_REQUESTED = False
     try:
         bundle = load_json(Path("all_agent_data.json"))
     except Exception as e:

@@ -327,6 +327,9 @@
         function skipConvo() {
             skipAnimation = true;
             document.getElementById('skip-btn').style.display = 'none';
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: "skip" }));
+            }
         }
 
         function showReport() {
@@ -398,10 +401,12 @@
             if (data.event === 'agent_dispatch' || data.event === 'agent_status') {
                 if (data.event === 'agent_dispatch') {
                     // Start typing indicator without adding a message
-                    statusText.textContent = `${displayName.toLowerCase()} is typing...`;
-                    typingName.textContent = `${displayName} is thinking...`;
-                    typingIndicator.style.display = 'flex';
-                    output.scrollTop = output.scrollHeight;
+                    if (!skipAnimation) {
+                        statusText.textContent = `${displayName.toLowerCase()} is typing...`;
+                        typingName.textContent = `${displayName} is thinking...`;
+                        typingIndicator.style.display = 'flex';
+                        output.scrollTop = output.scrollHeight;
+                    }
                 } else if (data.event === 'agent_status') {
                     // Hide typing indicator
                     typingIndicator.style.display = 'none';
@@ -414,9 +419,25 @@
 
             // System/Phase messages appear instantly
             if (displayName === 'System' || !data.text) {
+                if (data.event === 'report_start') {
+                    statusText.textContent = "Generating final report...";
+                    let reportBtn = document.getElementById('report-btn');
+                    reportBtn.textContent = "Generating Report... ⏳";
+                    reportBtn.style.display = 'block';
+                    reportBtn.disabled = true;
+                    document.getElementById('skip-btn').style.display = 'none';
+                    skipAnimation = true; 
+                    isProcessing = false;
+                    processQueue();
+                    return;
+                }
+
                 if (data.event === 'final_report') {
                     finalReportContent = data.text;
-                    document.getElementById('report-btn').style.display = 'block';
+                    let reportBtn = document.getElementById('report-btn');
+                    reportBtn.textContent = "View Report";
+                    reportBtn.disabled = false;
+                    reportBtn.style.display = 'block';
                     document.getElementById('skip-btn').style.display = 'none';
                     isProcessing = false;
                     processQueue();
