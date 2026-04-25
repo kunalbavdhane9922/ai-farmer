@@ -1,0 +1,97 @@
+{
+  "Metadata": {
+    "Location": "Pune, Maharashtra",
+    "Timestamp": "2026-04-25T11:50:00Z"
+  },
+  "ML_Engine_Data": [
+    {
+      "rank": 1,
+      "crop": "Rice",
+      "suitability": 92,
+      "confidence": 0.89
+    },
+    {
+      "rank": 2,
+      "crop": "Maize",
+      "suitability": 87,
+      "confidence": 0.84
+    },
+    {
+      "rank": 3,
+      "crop": "Sugarcane",
+      "suitability": 81,
+      "confidence": 0.91
+    },
+    {
+      "rank": 4,
+      "crop": "Cotton",
+      "suitability": 76,
+      "confidence": 0.78
+    },
+    {
+      "rank": 5,
+      "crop": "Soybean",
+      "suitability": 72,
+      "confidence": 0.85
+    }
+  ],
+  "Soil_Health_Card": {
+    "soil_type": "Loamy",
+    "texture": "Medium-fine",
+    "ph": 6.8,
+    "macronutrients": {
+      "N": "Medium",
+      "P": "High",
+      "K": "Medium"
+    },
+    "micronutrients": {
+      "Zinc": "Deficient",
+      "Boron": "Low",
+      "Sulphur": "Adequate"
+    },
+    "organic_carbon_percent": 0.55
+  },
+  "Weather_API_7_Day_Forecast": {
+    "avg_temp_c": 32,
+    "humidity_trend": "Increasing",
+    "total_rainfall_forecast_mm": 120,
+    "extreme_weather_alerts": [
+      "None"
+    ],
+    "dry_spell_probability": "Low"
+  },
+  "Market_Data_2026": [
+    {
+      "crop": "Rice",
+      "pune_mandi_price": 2100,
+      "arrival_volume_quintals": 15000,
+      "transportation_index": 1.2,
+      "price_trend": "Stable"
+    },
+    {
+      "crop": "Soybean",
+      "pune_mandi_price": 4800,
+      "arrival_volume_quintals": 5000,
+      "transportation_index": 0.8,
+      "price_trend": "Spiking"
+    }
+  ],
+  "Policy_Data_2026": {
+    "msp_2026": {
+      "Rice": 2183,
+      "Maize": 2090,
+      "Soybean": 4600
+    },
+    "export_status": {
+      "Rice": "Restricted",
+      "Soybean": "Open"
+    },
+    "subsidies": [
+      {
+        "scheme": "Aatmanirbhar Oilseeds",
+        "target_crop": "Soybean",
+        "benefit": "High"
+      }
+    ]
+  }
+}

@@ -1,0 +1,238 @@
+================================================================================
+AGRICULTURAL ADVISORY SYSTEM - ALL CODE & ARCHITECTURE
+================================================================================
+
+--------------------------------------------------------------------------------
+1. ARCHITECTURE OVERVIEW
+--------------------------------------------------------------------------------
+The Multi-Agent Agricultural Advisory System is a modular Python pipeline designed 
+to provide data-driven agricultural recommendations. It leverages local LLMs 
+(gemma3 via Ollama) to simulate a panel of experts.
+
+CORE PIPELINE PHASES:
+1. DATA LOADING: Extracts 'Knowledge Bundle' (Soil, Weather, Market, ML).
+2. PHASE 1 (PARALLEL): Agronomist, Market Strategist, and Trend Forecaster 
+   analyze 5 crops simultaneously.
+3. PHASE 2 (CRITIQUE): Iterative feedback loop between Agronomist and Market 
+   Strategist to refine scores and reasoning.
+4. PHASE 3 (FVI): Weighted scoring combining ML (40%) and Agents (60%).
+5. PHASE 4 (OUTPUT): Final consolidated report with actionable fertilizer 
+   and sowing advice.
+
+--------------------------------------------------------------------------------
+2. FILE LIST
+--------------------------------------------------------------------------------
+- requirements.txt      : Dependencies
+- data_loader.py        : JSON parsing and context extraction logic
+- agents.py             : Multi-agent orchestration and FVI calculation
+- all_agent_data.json   : The input Knowledge Bundle
+- agent_results.json    : The output analysis results
+
+--------------------------------------------------------------------------------
+3. SOURCE CODE: requirements.txt
+--------------------------------------------------------------------------------
+ollama
+
+--------------------------------------------------------------------------------
+4. SOURCE CODE: data_loader.py
+--------------------------------------------------------------------------------
+"""
+data_loader.py
+──────────────
+Loads and parses the local 'all_agent_data.json' Knowledge Bundle.
+"""
+
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+DATA_FILE = Path(__file__).parent / "all_agent_data.json"
+
+def load_json(filepath: Path = DATA_FILE) -> dict:
+    filepath = Path(filepath)
+    if not filepath.exists():
+        raise FileNotFoundError(f"Data file not found: {filepath}")
+    with open(filepath, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if "knowledge_bundle" not in data:
+        raise KeyError("JSON file is missing the top-level 'knowledge_bundle' key.")
+    print(f"[DataLoader] ✅ Loaded knowledge bundle from '{filepath.name}'")
+    return data
+
+def get_bundle(data: dict) -> dict:
+    return data["knowledge_bundle"]
+
+def get_metadata(bundle: dict) -> dict:
+    return bundle.get("metadata", {})
+
+def get_ml_engine_data(bundle: dict) -> dict:
+    return bundle.get("ml_engine_crop_suitability", {})
+
+def get_soil_health_card(bundle: dict) -> dict:
+    return bundle.get("soil_health_card", {})
+
+def get_weather_forecast(bundle: dict) -> dict:
+    return bundle.get("weather_forecast_2day", {})
+
+def get_market_policy_data(bundle: dict) -> dict:
+    return bundle.get("market_policy_data_2026", {})
+
+def get_top5_crops(bundle: dict) -> list[dict]:
+    ml = get_ml_engine_data(bundle)
+    crops = ml.get("top_5_crops", [])
+    if not crops:
+        raise ValueError("No 'top_5_crops' found in ML Engine data.")
+    return sorted(crops, key=lambda c: c["rank"])
+
+def get_top5_crop_names(bundle: dict) -> list[str]:
+    return [crop["crop_name"] for crop in get_top5_crops(bundle)]
+
+def get_micronutrients(bundle: dict) -> dict:
+    shc = get_soil_health_card(bundle)
+    return shc.get("micronutrients", {})
+
+def get_deficient_micronutrients(bundle: dict) -> list[dict]:
+    micros = get_micronutrients(bundle)
+    deficient = []
+    for name, info in micros.items():
+        if info.get("rating", "").lower() in ("deficient", "low"):
+            deficient.append({
+                "name": name.replace("_ppm", "").replace("_", " ").title(),
+                "value_ppm": info["value"],
+                "rating": info["rating"],
+                "critical_limit": info.get("critical_limit"),
+                "recommendation": info.get("recommendation", "N/A"),
+            })
+    return deficient
+
+def get_daily_forecasts(bundle: dict) -> list[dict]:
+    weather = get_weather_forecast(bundle)
+    return weather.get("daily_forecast", [])
+
+def get_agro_advisory(bundle: dict) -> dict:
+    weather = get_weather_forecast(bundle)
+    return weather.get("agro_advisory", {})
+
+def get_msp_data(bundle: dict) -> dict:
+    mp = get_market_policy_data(bundle)
+    return mp.get("minimum_support_price_msp", {})
+
+def get_mandi_prices(bundle: dict) -> list[dict]:
+    mp = get_market_policy_data(bundle)
+    return mp.get("current_mandi_prices", {}).get("prices", [])
+
+def get_government_schemes(bundle: dict) -> list[dict]:
+    mp = get_market_policy_data(bundle)
+    return mp.get("government_schemes_2026", [])
+
+def get_export_signals(bundle: dict) -> dict:
+    mp = get_market_policy_data(bundle)
+    return mp.get("export_demand_signals", {})
+
+def build_crop_context(bundle: dict, crop: dict) -> dict:
+    crop_name = crop["crop_name"]
+    crop_code = crop["crop_code"]
+    deficiencies = get_deficient_micronutrients(bundle)
+    forecasts = get_daily_forecasts(bundle)
+    advisory = get_agro_advisory(bundle)
+    msp = get_msp_data(bundle)
+    mandi = get_mandi_prices(bundle)
+    export = get_export_signals(bundle)
+    mandi_match = next((p for p in mandi if crop_name.split(" (")[0].lower() in p["crop"].lower()), None)
+    msp_key = None
+    for key in msp:
+        if crop_code.split("_")[0].lower() in key.lower():
+            msp_key = key
+            break
+    msp_info = msp.get(msp_key, {}) if msp_key else {}
+    export_key = crop_name.split(" (")[0].lower().replace(" ", "_")
+    export_signal = export.get(export_key, "No specific signal")
+    return {
+        "crop": crop, "soil_deficiencies": deficiencies, "weather_forecast": forecasts,
+        "agro_advisory": advisory, "msp": msp_info, "mandi_price": mandi_match,
+        "export_signal": export_signal, "government_schemes": get_government_schemes(bundle),
+    }
+
+--------------------------------------------------------------------------------
+5. SOURCE CODE: agents.py
+--------------------------------------------------------------------------------
+"""
+agents.py
+─────────
+Specialized async agents powered by Ollama (gemma3).
+Phases: 1 (Parallel), 2 (Critique), 3 (FVI), 4 (Intelligence Output).
+"""
+import asyncio
+import json
+import sys
+import time
+from typing import Any
+from ollama import AsyncClient
+from data_loader import (
+    load_json, get_bundle, get_top5_crops, get_deficient_micronutrients,
+    get_daily_forecasts, get_agro_advisory, get_mandi_prices, get_msp_data,
+    get_export_signals, get_metadata, get_soil_health_card,
+)
+
+MODEL = "gemma3"
+RESPONSE_SCHEMA = """
+{
+  "agent_name": "<string>",
+  "analysis": [
+    {"crop_name": "<string>", "score": <int 1-10>, "reason": "<one sentence>"}
+  ]
+}
+""".strip()
+
+# ... (Prompt Builders & Core Logic - See File for Full Implementation) ...
+
+def _extract_analysis_map(result: dict) -> dict[str, dict]:
+    out = {}
+    for e in result.get("analysis", []):
+        key = _fuzzy_match_crop(e.get("crop_name", ""))
+        out[key] = {"score": e.get("score", 0), "reason": e.get("reason", "N/A")}
+    return out
+
+def compute_fvi(bundle, agro_result, market_result, trend_result):
+    top5 = get_top5_crops(bundle)
+    agro_map = _extract_analysis_map(agro_result)
+    mkt_map = _extract_analysis_map(market_result)
+    trend_map = _extract_analysis_map(trend_result)
+    results = []
+    for crop in top5:
+        name = crop["crop_name"]
+        ml_scaled = crop["suitability_score"] * 10
+        s_agronomy = agro_map.get(name, {}).get("score", 0)
+        s_market = mkt_map.get(name, {}).get("score", 0)
+        s_demand = trend_map.get(name, {}).get("score", 0)
+        fvi = (ml_scaled * 0.4) + (s_agronomy * 0.2) + (s_market * 0.2) + (s_demand * 0.2)
+        results.append({
+            "crop_name": name, "ml_score": round(ml_scaled, 2),
+            "s_agronomy": s_agronomy, "s_market": s_market,
+            "s_demand": s_demand, "fvi": round(fvi, 2),
+        })
+    results.sort(key=lambda r: r["fvi"], reverse=True)
+    for i, r in enumerate(results, 1): r["rank"] = i
+    return results
+
+# ... (Main Execution Loop - Phase 1 to 4) ...
+
+--------------------------------------------------------------------------------
+6. DATA STRUCTURE: all_agent_data.json
+--------------------------------------------------------------------------------
+(Contains the Knowledge Bundle with ML Scores, SHC, Weather, and Market data.)
+Example Top-5 Crops:
+- Paddy (IR-64): 0.94
+- Black Gram (Urad Dal): 0.88
+- Sugarcane (Co-86032): 0.85
+- Groundnut (TMV-7): 0.79
+- Maize (Hybrid NK-6240): 0.74
+
+--------------------------------------------------------------------------------
+7. EXECUTION SUMMARY: agent_results.json
+--------------------------------------------------------------------------------
+(Stores the output of each phase: Initial, Critique, FVI, and Advisory Report.)
+Final Recommendation: Black Gram (Urad Dal) with FVI = 9.12/10.
+================================================================================
