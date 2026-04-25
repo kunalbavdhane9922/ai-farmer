@@ -223,6 +223,34 @@ async def _call_agent(agent_label: str, prompt: str, *, phase: str = "") -> dict
         return {"agent_name": agent_label, "analysis": []}
 
 # ──────────────────────────────────────────────
+#  Final Report Generator
+# ──────────────────────────────────────────────
+async def _generate_final_report(history: str) -> str:
+    prompt = f"""You are the Chief Agricultural Coordinator.
+Based on the following deep discussion between the Farmer, Trader, and Analyst, create a definitive final recommendation report for the user.
+The report must accurately reflect the consensus (or trade-offs) discussed by the experts. Do NOT fake or hallucinate data; stick to what they discussed.
+Do not mention AI or ML models. Present it as a professional, human-authored agricultural advisory report.
+Use Markdown format. Include:
+1. **Executive Summary**: Which crop is the ultimate winner and why?
+2. **Crop Rankings**: Provide the top 3 choices with concise, highly accurate reasons derived from the debate.
+3. **Risk Factors**: Highlight any weather or market risks mentioned.
+
+Discussion History:
+{history}
+"""
+    client = AsyncClient()
+    print("  🚀 [System] Generating Final Report...")
+    await broadcast_log("System", "Generating Final Report based on the debate...", "final_report_generation", "system_log")
+    response = await client.chat(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        options={"temperature": 0.4},
+    )
+    report = response["message"]["content"]
+    await broadcast_log("System", report, "final_report", "final_report")
+    return report
+
+# ──────────────────────────────────────────────
 #  Pipeline
 # ──────────────────────────────────────────────
 async def run_pipeline(bundle: dict):
@@ -282,6 +310,10 @@ Format your response exactly using this JSON schema:
                 crop=c.get("crop_name", "Unknown"),
                 phase="cross_critique"
             )
+
+    # Phase 3: Final Report
+    full_history = history + f"\nFarmer's Critique: {farmer_crit_res.get('thinking_process')}\nTrader's Critique: {trader_crit_res.get('thinking_process')}"
+    await _generate_final_report(full_history)
 
     await broadcast_log("System", "Debate concluded.", "done", "pipeline_end")
     return {"status": "success"}

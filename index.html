@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +17,7 @@
             height: 100vh;
             box-sizing: border-box;
         }
+
         #chat-container {
             background-color: #efeae2;
             width: 100%;
@@ -24,13 +26,13 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
             background-repeat: repeat;
             background-blend-mode: multiply;
             background-color: rgba(239, 234, 226, 0.95);
         }
-        
+
         /* Header */
         #header {
             background-color: #008069;
@@ -39,13 +41,15 @@
             align-items: center;
             justify-content: space-between;
             z-index: 10;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             color: #ffffff;
         }
+
         .header-info {
             display: flex;
             align-items: center;
         }
+
         .avatar {
             width: 40px;
             height: 40px;
@@ -57,27 +61,67 @@
             font-size: 20px;
             margin-right: 15px;
         }
+
         .group-name {
             font-size: 16px;
             font-weight: 500;
         }
+
         .group-status {
             font-size: 13px;
             color: #e9edef;
             margin-top: 2px;
         }
-        #run-btn {
+
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .header-btn {
             background-color: #ffffff;
             color: #008069;
             border: none;
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
+            font-size: 14px;
         }
-        #run-btn:hover { background-color: #f0f0f0; }
-        #run-btn:disabled { background-color: #e0e0e0; color: #8696a0; cursor: not-allowed; }
+
+        .header-btn:hover {
+            background-color: #f0f0f0;
+        }
+
+        .header-btn:disabled {
+            background-color: #e0e0e0;
+            color: #8696a0;
+            cursor: not-allowed;
+        }
+
+        #report-container {
+            display: none;
+            flex: 1;
+            background-color: #ffffff;
+            padding: 30px;
+            overflow-y: auto;
+            line-height: 1.6;
+            font-size: 16px;
+            color: #333;
+            border-radius: 8px;
+            margin: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        #report-container h1, #report-container h2, #report-container h3 {
+            color: #008069;
+        }
+
+        .markdown-body {
+            max-width: 800px;
+            margin: 0 auto;
+        }
 
         /* Chat Area */
         #output {
@@ -88,11 +132,20 @@
             flex-direction: column;
             scroll-behavior: smooth;
         }
-        
+
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cccccc;
+            border-radius: 3px;
+        }
 
         /* Messages */
         .msg-wrapper {
@@ -100,28 +153,35 @@
             margin-bottom: 12px;
             width: 100%;
         }
+
         .msg-wrapper.sent {
             justify-content: flex-end;
         }
+
         .msg-wrapper.received {
             justify-content: flex-start;
         }
-        
+
         .msg-bubble {
             padding: 6px 10px 8px 10px;
             border-radius: 8px;
             max-width: 80%;
             position: relative;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
         }
+
         .msg-bubble.sent {
-            background-color: #d9fdd3; /* WhatsApp light sent */
+            background-color: #d9fdd3;
+            /* WhatsApp light sent */
             border-bottom-right-radius: 0;
         }
+
         .msg-bubble.received {
-            background-color: #ffffff; /* WhatsApp light received */
+            background-color: #ffffff;
+            /* WhatsApp light received */
             border-bottom-left-radius: 0;
         }
+
         .msg-bubble.system {
             background-color: #fff5c4;
             margin: 10px auto;
@@ -132,13 +192,14 @@
             padding: 6px 12px;
             max-width: 90%;
         }
-        
+
         .sender-name {
             font-size: 13px;
             font-weight: 600;
             margin-bottom: 4px;
             display: block;
         }
+
         .msg-text {
             font-size: 14.5px;
             line-height: 1.4;
@@ -146,11 +207,19 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        
+
         /* Agent Colors (only used for received messages to match WhatsApp style) */
-        .color-trader { color: #e53935; }
-        .color-analyst { color: #ff8f00; }
-        .color-farmer { color: #0288d1; }
+        .color-trader {
+            color: #e53935;
+        }
+
+        .color-analyst {
+            color: #ff8f00;
+        }
+
+        .color-farmer {
+            color: #0288d1;
+        }
 
         /* Typing Indicator */
         #typing-indicator {
@@ -159,6 +228,7 @@
             padding: 10px 20px;
             background-color: transparent;
         }
+
         .typing-bubble {
             background-color: #ffffff;
             padding: 12px 16px;
@@ -167,8 +237,9 @@
             align-items: center;
             gap: 4px;
             width: max-content;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
         }
+
         .dot {
             width: 6px;
             height: 6px;
@@ -176,12 +247,26 @@
             border-radius: 50%;
             animation: bounce 1.4s infinite ease-in-out both;
         }
-        .dot:nth-child(1) { animation-delay: -0.32s; }
-        .dot:nth-child(2) { animation-delay: -0.16s; }
-        
+
+        .dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
         @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
         }
 
         .typing-text {
@@ -190,9 +275,9 @@
             margin-left: 8px;
             font-style: italic;
         }
-
     </style>
 </head>
+
 <body>
     <div id="chat-container">
         <div id="header">
@@ -203,11 +288,19 @@
                     <div class="group-status" id="status-text">tap to start pipeline</div>
                 </div>
             </div>
-            <button id="run-btn" onclick="runPipeline()">Start Debate</button>
+            <div class="header-buttons">
+                <button id="skip-btn" class="header-btn" onclick="skipConvo()" style="display: none;">Skip Convo</button>
+                <button id="report-btn" class="header-btn" onclick="showReport()" style="display: none;">View Report</button>
+                <button id="run-btn" class="header-btn" onclick="runPipeline()">Start Debate</button>
+            </div>
         </div>
-        
+
         <div id="output"></div>
         
+        <div id="report-container">
+            <div class="markdown-body" id="report-content"></div>
+        </div>
+
         <div id="typing-indicator">
             <div class="typing-bubble">
                 <div class="dot"></div>
@@ -219,15 +312,38 @@
     </div>
 
     <script>
-        const ws = new WebSocket('ws://localhost:8000/ws');
+        const ws = new WebSocket('ws://localhost:8001/ws');
         const output = document.getElementById('output');
         const typingIndicator = document.getElementById('typing-indicator');
         const typingName = document.getElementById('typing-name');
         const runBtn = document.getElementById('run-btn');
         const statusText = document.getElementById('status-text');
-        
+
         let messageQueue = [];
         let isProcessing = false;
+        let skipAnimation = false;
+        let finalReportContent = "";
+
+        function skipConvo() {
+            skipAnimation = true;
+            document.getElementById('skip-btn').style.display = 'none';
+        }
+
+        function showReport() {
+            document.getElementById('output').style.display = 'none';
+            document.getElementById('typing-indicator').style.display = 'none';
+            document.getElementById('report-container').style.display = 'block';
+            document.getElementById('report-btn').style.display = 'none';
+            // Simple markdown parser
+            let html = finalReportContent
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^\d+\.\s+(.*$)/gim, '<li>$1</li>')
+                .replace(/\n/g, '<br>');
+            document.getElementById('report-content').innerHTML = html;
+        }
 
         const colorMap = {
             'Trader': 'color-trader',
@@ -253,13 +369,21 @@
             runBtn.disabled = true;
             runBtn.textContent = "Running...";
             statusText.textContent = "agents are thinking...";
+            skipAnimation = false;
+            finalReportContent = "";
+            document.getElementById('skip-btn').style.display = 'block';
+            document.getElementById('report-btn').style.display = 'none';
+            document.getElementById('output').style.display = 'flex';
+            document.getElementById('report-container').style.display = 'none';
+            document.getElementById('output').innerHTML = ''; // Clear chat
             try {
-                await fetch('http://localhost:8000/run', { method: 'POST' });
+                await fetch('http://localhost:8001/run', { method: 'POST' });
             } catch (err) {
                 addSystemMessage('Error triggering pipeline: ' + err.message);
                 runBtn.disabled = false;
                 runBtn.textContent = "Start Debate";
                 statusText.textContent = "error occurred";
+                document.getElementById('skip-btn').style.display = 'none';
             }
         }
 
@@ -290,11 +414,21 @@
 
             // System/Phase messages appear instantly
             if (displayName === 'System' || !data.text) {
+                if (data.event === 'final_report') {
+                    finalReportContent = data.text;
+                    document.getElementById('report-btn').style.display = 'block';
+                    document.getElementById('skip-btn').style.display = 'none';
+                    isProcessing = false;
+                    processQueue();
+                    return;
+                }
+
                 addSystemMessage(data.text || `>>> Phase: ${data.phase}`);
                 if (data.event === 'pipeline_end') {
                     runBtn.disabled = false;
-                    runBtn.textContent = "Start Debate";
+                    runBtn.textContent = "Restart Debate";
                     statusText.textContent = "pipeline complete";
+                    document.getElementById('skip-btn').style.display = 'none';
                 }
                 isProcessing = false;
                 processQueue();
@@ -303,23 +437,22 @@
 
             // --- Agent Message Logic ---
             let baseName = displayName.split(" ")[0]; // e.g. "Farmer" from "Farmer (critique R1)"
-            
-            // Show "Thinking" loader
-            statusText.textContent = `${displayName.toLowerCase()} is typing...`;
-            typingName.textContent = `${displayName} is thinking...`;
-            typingIndicator.style.display = 'flex';
-            output.scrollTop = output.scrollHeight;
 
-            // Short simulated think time before they start "typing" it onto the screen
-            await new Promise(r => setTimeout(r, 800));
-            
-            typingIndicator.style.display = 'none';
-            statusText.textContent = "online";
+            // Show "Thinking" loader
+            if (!skipAnimation) {
+                statusText.textContent = `${displayName.toLowerCase()} is typing...`;
+                typingName.textContent = `${displayName} is thinking...`;
+                typingIndicator.style.display = 'flex';
+                output.scrollTop = output.scrollHeight;
+                await new Promise(r => setTimeout(r, 800));
+                typingIndicator.style.display = 'none';
+                statusText.textContent = "online";
+            }
 
             // Determine sender vs receiver (Farmer is "sender"/green block, others are "receivers"/white block)
             const isSender = displayName.includes('Farmer');
             const wrapperClass = isSender ? 'sent' : 'received';
-            
+
             // Get color class for receiver names
             let colorClass = 'color-default';
             if (!isSender) {
@@ -331,7 +464,7 @@
             // Render message bubble container
             const msgWrapper = document.createElement('div');
             msgWrapper.className = `msg-wrapper ${wrapperClass}`;
-            
+
             const msgBubble = document.createElement('div');
             msgBubble.className = `msg-bubble ${wrapperClass}`;
 
@@ -346,7 +479,7 @@
             const textSpan = document.createElement('div');
             textSpan.className = 'msg-text';
             msgBubble.appendChild(textSpan);
-            
+
             msgWrapper.appendChild(msgBubble);
             output.appendChild(msgWrapper);
             output.scrollTop = output.scrollHeight;
@@ -380,15 +513,16 @@
                     currentHTML += formattedText[i];
                     i++;
                     // Small delay per character
-                    await new Promise(r => setTimeout(r, 10)); // very fast typewriter
+                    if (!skipAnimation) await new Promise(r => setTimeout(r, 10)); // very fast typewriter
                 }
                 textSpan.innerHTML = currentHTML;
-                output.scrollTop = output.scrollHeight;
+                if (!skipAnimation) output.scrollTop = output.scrollHeight;
             }
+            if (skipAnimation) output.scrollTop = output.scrollHeight;
 
             // Small delay before next message starts
-            await new Promise(r => setTimeout(r, 400));
-            
+            if (!skipAnimation) await new Promise(r => setTimeout(r, 400));
+
             isProcessing = false;
             processQueue();
         }
@@ -405,4 +539,5 @@
         }
     </script>
 </body>
+
 </html>
