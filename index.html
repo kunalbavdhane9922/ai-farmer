@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgriAdvisor Group Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
             background-color: #e0e0e0;
@@ -116,6 +117,29 @@
         .markdown-body {
             max-width: 800px;
             margin: 0 auto;
+        }
+
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+        }
+        
+        .markdown-body th, .markdown-body td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .markdown-body th {
+            background-color: #f5f7f9;
+            color: #1976d2;
+            font-weight: 600;
+        }
+        
+        .markdown-body tr:nth-child(even) {
+            background-color: #fcfcfc;
         }
 
         /* Chat Area */
@@ -375,15 +399,9 @@
             document.getElementById('typing-indicator').style.display = 'none';
             document.getElementById('report-container').style.display = 'block';
             document.getElementById('report-btn').style.display = 'none';
-            // Simple markdown parser
-            let html = finalReportContent
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                .replace(/^\d+\.\s+(.*$)/gim, '<li>$1</li>')
-                .replace(/\n/g, '<br>');
-            document.getElementById('report-content').innerHTML = html;
+            
+            // Use marked.js for proper markdown rendering (supports tables, lists, etc)
+            document.getElementById('report-content').innerHTML = marked.parse(finalReportContent);
         }
 
         const colorMap = {

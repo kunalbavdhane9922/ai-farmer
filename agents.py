@@ -237,17 +237,29 @@ SKIP_REQUESTED = False
 #  Final Report Generator
 # ──────────────────────────────────────────────
 async def _generate_final_report(history: str) -> str:
-    prompt = f"""You are the Chief Agricultural Coordinator.
-Based on the following deep discussion between the Farmer, Trader, and Analyst, create a definitive final recommendation report for the user.
+    prompt = f"""Based on the following deep discussion between the Farmer, Trader, and Analyst, create a definitive final recommendation report for the user.
 The report must accurately reflect the consensus (or trade-offs) discussed by the experts. Do NOT fake or hallucinate data; stick to what they discussed.
-Do not mention AI or ML models. Present it as a professional, human-authored agricultural advisory report.
 
-Use Markdown format. The report MUST contain exactly these sections and headings:
-1. **Recommended Crops**: (Which crop(s) are the ultimate winners)
-2. **Profit**: (Each crop wise yearly profit estimates or potential based on the discussion)
-3. **Risk**: (Highlight any weather or market risks mentioned)
-4. **Reason**: (Why the recommended crops were chosen)
-5. **Avoid**: (Crops to completely avoid and why)
+CRITICAL FORMATTING RULES:
+1. Do NOT write this as a letter, email, or memo. 
+2. Do NOT include "To:", "From:", "Date:", or any opening pleasantries. 
+3. Go straight into the content using beautiful, structured Markdown.
+4. You MUST use exactly these 5 Markdown Headings (e.g. `## 1. Recommended Crops`):
+
+## 1. Recommended Crops
+(Which crop(s) are the ultimate winners)
+
+## 2. Profit
+(Use a Markdown Table to show each crop wise yearly profit estimates or potential based on the discussion)
+
+## 3. Risk
+(Highlight any weather or market risks mentioned)
+
+## 4. Reason
+(Why the recommended crops were chosen)
+
+## 5. Avoid
+(Crops to completely avoid and why)
 
 Discussion History:
 {history}
